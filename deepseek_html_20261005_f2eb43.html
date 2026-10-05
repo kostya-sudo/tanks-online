@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Танки 2D — Онлайн</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Socket.IO клиент -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+
+<!-- ========== ГЛАВНОЕ МЕНЮ ========== -->
+<div class="main-menu" id="mainMenu">
+    <div class="main-logo">ТАНКИ 2D</div>
+    <div class="main-subtitle">ОНЛАЙН БИТВЫ</div>
+
+    <div class="nick-section" id="nickSection">
+        <div class="nick-label">👤 Твой ник</div>
+        <div class="nick-input-wrap">
+            <div class="avatar">🎮</div>
+            <input type="text" class="nick-input" id="nickInput" placeholder="Введи свой ник..." maxlength="16">
+        </div>
+    </div>
+
+    <div class="main-buttons">
+        <button class="main-btn friend" id="btnPlayFriend">
+            <span class="icon">🎮</span>
+            <span class="text-block">
+                <span class="title">Игра с другом</span>
+                <span class="sub">Локально на одном устройстве</span>
+            </span>
+        </button>
+        <button class="main-btn online" id="btnPlayOnline">
+            <span class="icon">🌐</span>
+            <span class="text-block">
+                <span class="title">Играть онлайн</span>
+                <span class="sub">Требуется регистрация</span>
+            </span>
+        </button>
+        <button class="main-btn leaderboard" id="btnLeaderboard">
+            <span class="icon">🏆</span>
+            <span class="text-block">
+                <span class="title">Лидерборд</span>
+                <span class="sub">Топ-50 игроков</span>
+            </span>
+        </button>
+    </div>
+
+    <div class="main-menu-status" id="mainMenuStatus"></div>
+</div>
+
+<!-- ========== РЕГИСТРАЦИЯ / ВХОД ========== -->
+<div class="auth-screen" id="authScreen">
+    <div class="auth-title">🌐 ОНЛАЙН</div>
+    <div class="auth-subtitle">Войди или зарегистрируйся для игры по сети</div>
+
+    <div class="auth-box">
+        <div class="auth-tabs">
+            <div class="auth-tab active" id="tabLogin">Вход</div>
+            <div class="auth-tab" id="tabRegister">Регистрация</div>
+        </div>
+
+        <div class="auth-field">
+            <label>Ник</label>
+            <input type="text" id="authNick" maxlength="16" placeholder="Твой ник">
+        </div>
+
+        <div class="auth-field">
+            <label>Пароль</label>
+            <input type="password" id="authPassword" maxlength="32" placeholder="••••••••">
+        </div>
+
+        <div class="auth-error" id="authError"></div>
+        <div class="auth-success" id="authSuccess"></div>
+
+        <button class="menu-btn primary" id="authSubmit" style="width:100%; padding:14px;">Войти</button>
+        <button class="menu-btn" id="authBack" style="width:100%;">◀ Назад</button>
+    </div>
+
+    <div style="color:#7f8c8d; font-size:11px; margin-top:16px; text-align:center; max-width:340px;">
+        ⚠️ Не используй настоящие пароли от других сервисов
+    </div>
+</div>
+
+<!-- ========== ЛИДЕРБОРД ========== -->
+<div class="leaderboard-screen" id="leaderboardScreen">
+    <div class="auth-title">🏆 ЛИДЕРБОРД</div>
+    <div class="auth-subtitle">Топ-50 игроков по ELO</div>
+
+    <div class="leaderboard-box" id="leaderboardBox">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <button class="menu-btn" id="leaderboardBack" style="margin-top:16px;">◀ Назад</button>
+</div>
+
+<!-- ========== НАСТРОЙКА ИГРЫ ========== -->
+<div class="setup-screen" id="setupScreen">
+    <div class="setup-header">
+        <button class="back-btn" id="setupBackBtn">◀</button>
+        <div style="font-size:16px; font-weight:bold; color:#f1c40f;" id="setupTitle">🎮 ИГРА С ДРУГОМ</div>
+        <div class="setup-nick-badge">
+            <span id="setupNickEmoji">🎮</span>
+            <span id="setupNick">Игрок</span>
+        </div>
+    </div>
+
+    <!-- Только для онлайн-режима -->
+    <div id="onlineOptions" style="display:none; width:100%; max-width:560px;">
+        <div class="section-title">👥 МАКС. ИГРОКОВ</div>
+        <div class="online-options-row" id="maxPlayersOptions">
+            <button class="opt-btn" data-value="2">2 игрока</button>
+            <button class="opt-btn selected" data-value="4">4 игрока</button>
+        </div>
+    </div>
+
+    <!-- Только для локальной игры -->
+    <div id="localOptions" style="width:100%;">
+        <div class="section-title">👥 ИГРОКИ И КОМАНДЫ</div>
+        <div class="players-list" id="playersList"></div>
+        <div class="menu-buttons" style="margin-bottom: 6px;">
+            <button class="menu-btn" id="addPlayerBtn">➕ Добавить</button>
+        </div>
+    </div>
+
+    <div class="section-title">🗺 КАРТА</div>
+    <div class="maps-grid" id="mapsGrid"></div>
+
+    <div class="section-title">🎮 РЕЖИМ</div>
+    <div class="modes-grid" id="modesGrid"></div>
+
+    <div class="menu-buttons" style="margin-top: 10px;">
+        <button class="menu-btn primary" id="startBtn">▶ ИГРАТЬ</button>
+    </div>
+</div>
+
+<!-- ========== ПОИСК ИГРЫ ========== -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <div class="loading-text" id="loadingText">ПОДКЛЮЧЕНИЕ...</div>
+    <div class="loading-subtext" id="loadingSubtext"></div>
+    <button class="menu-btn" id="cancelFindBtn" style="display:none; margin-top:20px;">✖ Отменить поиск</button>
+</div>
+
+<!-- ========== МАГАЗИН ========== -->
+<div class="shop-screen" id="shopScreen">
+    <div class="shop-header">
+        <div class="shop-player-info">
+            <div class="shop-player-name" id="shopPlayerName">Игрок 1</div>
+            <div class="shop-team-badge" id="shopTeamBadge"></div>
+            <div class="shop-money" id="shopMoney">💰 500</div>
+        </div>
+        <div class="shop-ready-badge" id="shopReadyBadge" style="display:none;">✔ ГОТОВ</div>
+    </div>
+    <div class="shop-players-status" id="shopPlayersStatus"></div>
+    <div class="shop-items" id="shopItems"></div>
+    <div class="shop-hint" id="shopHint">Купите вооружение и нажмите «ГОТОВ»</div>
+    <div class="shop-footer">
+        <button class="menu-btn" id="shopBackBtn">◀ Назад</button>
+        <button class="menu-btn primary" id="shopReadyBtn">✔ ГОТОВ</button>
+    </div>
+</div>
+
+<!-- ========== ИГРА ========== -->
+<div class="game-wrapper" id="gameWrapper" style="position:relative;">
+    <div class="game-hud" id="gameHud">
+        <div class="hud-timer" id="hudTimer">01:30</div>
+        <div class="hud-score" id="hudScore"></div>
+    </div>
+    <canvas id="gameCanvas"></canvas>
+    <div class="controls" id="controlsContainer"></div>
+    <div class="menu-bar">
+        <button class="menu-btn" id="btnBackToMenu">🏠 В меню</button>
+        <button class="menu-btn primary" id="btnRestart">🔄 Заново</button>
+    </div>
+</div>
+
+<!-- ========== ПОБЕДИТЕЛЬ ========== -->
+<div class="winner-overlay" id="winnerOverlay">
+    <div class="winner-text" id="winnerText">Победил игрок 1!</div>
+    <div class="score-table" id="scoreTable">
+        <div class="score-table-title">📊 ТАБЛИЦА</div>
+        <div class="score-row header">
+            <div>#</div>
+            <div>Игрок</div>
+            <div style="text-align:center;">Убийств</div>
+            <div style="text-align:center;">Смертей</div>
+        </div>
+        <div id="scoreRows"></div>
+    </div>
+    <div class="menu-buttons">
+        <button class="menu-btn primary" id="btnPlayAgain">🔄 Играть снова</button>
+        <button class="menu-btn" id="btnMenuFromWin">🏠 В меню</button>
+    </div>
+</div>
+
+<!-- ========== ПОДКЛЮЧАЕМ СКРИПТЫ ========== -->
+<script src="net.js"></script>
+<script src="client.js"></script>
+</body>
+</html>
